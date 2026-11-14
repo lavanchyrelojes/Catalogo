@@ -1,0 +1,127 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Catálogo</title>
+<style>
+  :root{--bg:#0e0e0e;--fg:#f2efe9;--mut:#8a867d;--ac:#c9a96a;--card:#1a1a1a}
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--fg);font-family:Georgia,serif}
+  header{padding:20px;text-align:center;letter-spacing:.35em;text-transform:uppercase;
+    border-bottom:1px solid #222;position:sticky;top:0;background:var(--bg);z-index:5;cursor:pointer}
+  main{padding:20px;max-width:1300px;margin:auto}
+  .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:14px}
+  .card{background:var(--card);border-radius:6px;overflow:hidden;cursor:pointer;transition:.2s}
+  .card:hover{transform:translateY(-3px);outline:1px solid var(--ac)}
+  .card img{width:100%;aspect-ratio:1;object-fit:cover;display:block;background:#222}
+  .card div{padding:12px;text-align:center;letter-spacing:.15em;text-transform:uppercase;font-size:13px}
+  .chips{display:flex;flex-wrap:wrap;gap:8px;margin:14px 0 20px}
+  .chip{padding:6px 12px;border:1px solid #333;border-radius:20px;font-size:12px;cursor:pointer;color:var(--mut)}
+  .chip.on{border-color:var(--ac);color:var(--ac)}
+  .back{color:var(--ac);cursor:pointer;font-size:14px}
+  h2{font-weight:400;letter-spacing:.2em;text-transform:uppercase;margin:10px 0}
+  #lb{position:fixed;inset:0;background:rgba(0,0,0,.95);display:none;flex-direction:column;z-index:10}
+  #lb.open{display:flex}
+  #big{flex:1;min-height:0;display:flex;align-items:center;justify-content:center;position:relative}
+  #big img{max-width:100%;max-height:100%;object-fit:contain}
+  .nav{position:absolute;top:50%;font-size:40px;cursor:pointer;padding:10px 16px;user-select:none;color:var(--ac)}
+  #prev{left:0}#next{right:0}
+  #x{position:absolute;top:8px;right:16px;font-size:34px;cursor:pointer;z-index:2}
+  #ref{position:absolute;top:14px;left:16px;font-size:12px;color:var(--mut)}
+  #th{display:flex;gap:6px;overflow-x:auto;padding:10px;justify-content:center}
+  #th img{height:64px;width:64px;object-fit:cover;opacity:.5;cursor:pointer;border-radius:3px}
+  #th img.on{opacity:1;outline:1px solid var(--ac)}
+</style>
+</head>
+<body>
+<header onclick="home()">Catálogo</header>
+<main id="app"></main>
+<div id="lb">
+  <span id="x" onclick="closeLb()">×</span><span id="ref"></span>
+  <div id="big"><span class="nav" id="prev" onclick="step(-1)">‹</span>
+    <img id="bimg"><span class="nav" id="next" onclick="step(1)">›</span></div>
+  <div id="th"></div>
+</div>
+
+<script>
+// ▼▼▼ PEGA AQUÍ LA URL DE TU IMPLEMENTACIÓN (la que termina en /exec) ▼▼▼
+var API = 'https://script.google.com/macros/s/AKfycbzfhUaIsW_T89_Q2c6qsFrb7XIiradJdZjqslSjcSiCLdv88wAqbjn3OztZRnKQb4h2ow/exec';
+// ▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲
+
+var D = [], cur = null, idx = 0;
+var app = document.getElementById('app');
+app.innerHTML = '<p style="text-align:center;color:#8a867d">Cargando...</p>';
+
+function T(id, w) { return 'https://drive.google.com/thumbnail?id=' + id + '&sz=w' + w; }
+function esc(s) {
+  return String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+}
+
+function home() {
+  window.scrollTo(0, 0);
+  var h = '<div class="grid">';
+  D.forEach(function (b, i) {
+    h += '<div class="card" onclick="brand(' + i + ')"><img loading="lazy" src="' + T(b.items[0].t, 400) + '"><div>' + esc(b.n) + '</div></div>';
+  });
+  app.innerHTML = h + '</div>';
+}
+
+function brand(bi, model) {
+  window.scrollTo(0, 0);
+  var b = D[bi], models = [];
+  b.items.forEach(function (x) { if (models.indexOf(x.m) < 0) models.push(x.m); });
+  var h = '<span class="back" onclick="home()">← Marcas</span><h2>' + esc(b.n) + '</h2>';
+  h += '<div class="chips"><span class="chip' + (model ? '' : ' on') + '" onclick="brand(' + bi + ')">Todos</span>';
+  models.forEach(function (m, k) {
+    h += '<span class="chip' + (model === m ? ' on' : '') + '" data-m="' + k + '">' + esc(m) + '</span>';
+  });
+  h += '</div><div class="grid">';
+  b.items.forEach(function (x, k) {
+    if (model && x.m !== model) return;
+    h += '<div class="card" onclick="openLb(' + bi + ',' + k + ')"><img loading="lazy" src="' + T(x.t, 400) + '"></div>';
+  });
+  app.innerHTML = h + '</div>';
+  var chips = app.querySelectorAll('.chip[data-m]');
+  for (var j = 0; j < chips.length; j++) {
+    (function (c) { c.onclick = function () { brand(bi, models[c.getAttribute('data-m')]); }; })(chips[j]);
+  }
+}
+
+function openLb(bi, k) {
+  cur = D[bi].items[k]; idx = 0;
+  document.getElementById('ref').textContent = cur.m + ' · ' + cur.r;
+  document.getElementById('th').innerHTML = cur.i.map(function (id, n) {
+    return '<img src="' + T(id, 150) + '" onclick="show(' + n + ')">';
+  }).join('');
+  document.getElementById('lb').classList.add('open');
+  show(0);
+}
+function show(n) {
+  idx = (n + cur.i.length) % cur.i.length;
+  document.getElementById('bimg').src = T(cur.i[idx], 1600);
+  var t = document.querySelectorAll('#th img');
+  for (var k = 0; k < t.length; k++) t[k].classList.toggle('on', k === idx);
+}
+function step(d) { show(idx + d); }
+function closeLb() { document.getElementById('lb').classList.remove('open'); }
+document.addEventListener('keydown', function (e) {
+  if (!document.getElementById('lb').classList.contains('open')) return;
+  if (e.key === 'ArrowRight') step(1);
+  if (e.key === 'ArrowLeft') step(-1);
+  if (e.key === 'Escape') closeLb();
+});
+
+fetch(API)
+  .then(function (r) { return r.json(); })
+  .then(function (data) {
+    D = data;
+    if (!D.length) { app.innerHTML = '<p style="text-align:center;color:#8a867d">El índice está vacío</p>'; return; }
+    home();
+  })
+  .catch(function (e) {
+    app.innerHTML = '<p style="text-align:center;color:#c66">No se pudo cargar el catálogo: ' + esc(e.message) + '</p>';
+  });
+</script>
+</body>
+</html>
