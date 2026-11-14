@@ -45,8 +45,6 @@
 </div>
 
 <script>
-var API = 'https://script.google.com/macros/s/AKfycbzfhUaIsW_T89_Q2c6qsFrb7XIiradJdZjqslSjcSiCLdv88wAqbjn3OztZRnKQb4h2ow/exec';
-
 var D = [], cur = null, idx = 0;
 var app = document.getElementById('app');
 app.innerHTML = '<p style="text-align:center;color:#8a867d">Cargando...</p>';
@@ -110,24 +108,16 @@ document.addEventListener('keydown', function (e) {
   if (e.key === 'Escape') closeLb();
 });
 
-// Carga de datos por JSONP (etiqueta <script>)
-var loaded = false;
-window.onCatalog = function (data) {
-  loaded = true;
-  D = data;
-  if (!D.length) { app.innerHTML = '<p style="text-align:center;color:#8a867d">El índice está vacío</p>'; return; }
-  home();
-};
-function fail(msg) {
-  if (loaded) return;
-  app.innerHTML = '<p style="text-align:center;color:#c66">No se pudo cargar el catálogo. ' + esc(msg) + '</p>';
-}
-var s = document.createElement('script');
-s.src = API + '?callback=onCatalog';
-s.onerror = function () { fail('Error de red o implementación no pública.'); };
-document.body.appendChild(s);
-setTimeout(function () { fail('Tiempo de espera agotado.'); }, 25000);
+fetch('data.json')
+  .then(function (r) { if (!r.ok) throw new Error('data.json no encontrado'); return r.json(); })
+  .then(function (data) {
+    D = data;
+    if (!D.length) { app.innerHTML = '<p style="text-align:center;color:#8a867d">El índice está vacío</p>'; return; }
+    home();
+  })
+  .catch(function (e) {
+    app.innerHTML = '<p style="text-align:center;color:#c66">No se pudo cargar el catálogo: ' + esc(e.message) + '</p>';
+  });
 </script>
 </body>
 </html>
-
